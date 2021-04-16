@@ -20,6 +20,7 @@ from beancount.core import account_types
 from beancount.query import query
 from beancount.core.data import Custom
 from beancount.parser import options
+from operator import item_getter
 
 class BeancountEnvelope:
 
@@ -256,9 +257,26 @@ class BeancountEnvelope:
                     self.envelope_df.loc[account,(month_str,'available')] = Decimal(0.00)
 
     def _calc_budget_budgeted(self):
-        rows = {}
+        budget_categories={}
         for e in self.entries:
             if isinstance(e, Custom) and e.type == "envelope":
-                if e.values[0].value == "allocate":
-                    month = f"{e.date.year}-{e.date.month:02}"
-                    self.envelope_df.loc[e.values[1].value,(month,'budgeted')] = Decimal(e.values[2].value)
+                type_alloc=e.values[0].value
+                if type_alloc == "allocate" or type_alloc == "repeating":
+                    year=e.date.year
+                    month=e.date.month
+                    budget_entry=[year,month,Decimal(e.values[2].value,type_alloc]
+                    if e.values[1].value in budget_categories:
+                        budget_categories{e.values[1].value}=budget_categories{e.values[1].value}.append(budget_entry)
+                    else:
+                        budget_categories{e.values[1].value}=[].append(budget_entry)
+        for category in budget_categories:
+            sort_months=sort(budget_categories{category},key=itemgetter(1))
+            sort_date=sort(first_sort,key=itemgetter(0))
+                                  
+                                  
+
+                    
+#                    month = f"{e.date.year}-{e.date.month:02}"
+#                    self.envelope_df.loc[e.values[1].value,(month,'budgeted')] = Decimal(e.values[2].value)
+#                if e.values[0].value == "repeating":
+#                    month = f"{e.date.year}
