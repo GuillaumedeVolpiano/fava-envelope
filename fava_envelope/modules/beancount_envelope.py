@@ -20,7 +20,7 @@ from beancount.core import account_types
 from beancount.query import query
 from beancount.core.data import Custom
 from beancount.parser import options
-from operator import item_getter
+from operator import itemgetter
 
 class BeancountEnvelope:
 
@@ -256,6 +256,16 @@ class BeancountEnvelope:
                     self.envelope_df.loc[account,(month_str,'activity')] = Decimal(temp)
                     self.envelope_df.loc[account,(month_str,'available')] = Decimal(0.00)
 
+    def _fill(self,first_month,last_date):
+        first_date=12*first_month[0]+first_month[1]-1
+        filled_table=[]
+        for date in range(first_date,last_date):
+            year=date//12
+            month=date%12+1
+            filled_table.append([f"{year}-{month:02}", first_month[2]])
+        print(filled_table)
+        return filled_table
+                                 
     def _calc_budget_budgeted(self):
         budget_categories={}
         for e in self.entries:
@@ -264,19 +274,37 @@ class BeancountEnvelope:
                 if type_alloc == "allocate" or type_alloc == "repeating":
                     year=e.date.year
                     month=e.date.month
-                    budget_entry=[year,month,Decimal(e.values[2].value,type_alloc]
+                    budget_entry=[year,month,Decimal(e.values[2].value),type_alloc]
+                    print(budget_entry)
                     if e.values[1].value in budget_categories:
-                        budget_categories{e.values[1].value}=budget_categories{e.values[1].value}.append(budget_entry)
+                        print("Here")
+                        budget_categories[e.values[1].value]=budget_categories[e.values[1].value]+[budget_entry]
                     else:
-                        budget_categories{e.values[1].value}=[].append(budget_entry)
+                        print("There")
+                        budget_categories[e.values[1].value]=[budget_entry]
         for category in budget_categories:
-            sort_months=sort(budget_categories{category},key=itemgetter(1))
-            sort_date=sort(first_sort,key=itemgetter(0))
-                                  
-                                  
-
+            filled_budget=[]
+            print(budget_categories)
+            print(budget_categories[category])
+            sort_months=sorted(budget_categories[category],key=itemgetter(1))
+            sort_date=sorted(sort_months,key=itemgetter(0))
+            for index in range(len(sort_date)-1):
+                if sort_date[index][3]=="repeating":
+                    filled_budget=filled_budget+self._fill(sort_date[index],sort_date[index+1][0]*12+sort_date[index+1][1]-1)
+                else:
+                    filled_budget=filled_budget+[[f"{sort_date[index][0]}-{sort_date[index][1]:02}", sort_date[index][2]]]
+            print(sort_date)
+            if (sort_date[-1][0] < datetime.date.today().year or (sort_date[-1][0]==datetime.date.today().year and sort_date[-1][1] < datetime.date.today().month)) and sort_date[-1][3]=="repeating":
+                filled_budget=filled_budget+self._fill(sort_date[-1],datetime.date.today().year*12+datetime.date.today().month-1)
+            else:
+                filled_budget=filled_budget+[[f"{sort_date[-1][0]}-{sort_date[-1][1]:02}", sort_date[-1][2]]]
+            print(filled_budget)
+            for line in filled_budget:
+                month=line[0]
+                value=line[1]
+                print(month,value)
+                self.envelope_df.loc[category,(month,'budgeted')] = value
+            
                     
-#                    month = f"{e.date.year}-{e.date.month:02}"
-#                    self.envelope_df.loc[e.values[1].value,(month,'budgeted')] = Decimal(e.values[2].value)
-#                if e.values[0].value == "repeating":
-#                    month = f"{e.date.year}
+                    #month = f"{e.date.year}-{e.date.month:02}"
+                    #self.envelope_df.loc[e.values[1].value,(month,'budgeted')] = Decimal(e.values[2].value)
