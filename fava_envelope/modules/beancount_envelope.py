@@ -35,7 +35,7 @@ class BeancountEnvelope:
             self.etype="envelope"
 
         self.start_date, self.budget_accounts, self.mappings, self.income_accounts = self._find_envelop_settings()
-
+        #Set the currency if it wasn't set at initialisation or in the options.
         if not self.currency:
             self.currency=self._find_currency(options_map)
 
@@ -85,6 +85,8 @@ class BeancountEnvelope:
                         e.values[2].value
                     )
                     mappings.append(map_set)
+                    #income_account: an account for which a negative transaction towards a
+                    #budgeting account should be treated as an income in envelope terms.
                 if e.values[0].value == "income account":
                     income_accounts.append(re.compile(e.values[1].value))
                 if e.values[0].value == "currency":
@@ -222,10 +224,15 @@ class BeancountEnvelope:
                 account_type = account_types.get_account_type(account)
                 if posting.units.currency != self.currency:
                     orig=posting.units.number
-                    if posting.price is not None:
+                    #If the posting has a price towards the budget's currency,
+                    #use this to convert to the desired currency.
+                    if posting.price is not None and posting.price.currency==self.currency:
                         converted=posting.price.number*orig
-                        posting=data.Posting(posting.account,amount.Amount(converted,self.currency), posting.cost, None, posting.flag,posting.meta)
+                        posting=data.Posting(posting.account,
+                                             amount.Amount(converted,self.currency),
+                                             posting.cost, None, posting.flag,posting.meta)
                     else:
+                        #TODO: use price databases or options to set the price.
                         continue
 
                 if (account_type == self.acctypes.income

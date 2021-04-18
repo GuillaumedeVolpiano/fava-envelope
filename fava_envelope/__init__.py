@@ -26,6 +26,7 @@ class EnvelopeBudget(FavaExtensionBase):
         return self.income_tables.columns
 
     def check_month_in_available_months(self,month,currency):
+        #Should only be called if operating over multiple budgets.
         if currency and month:
             if month in self.get_budgets_months_available(currency):
                 return True

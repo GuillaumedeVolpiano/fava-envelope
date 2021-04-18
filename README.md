@@ -62,9 +62,30 @@ By default fava-envelope will use the Assets/Liabilities/Income/Expenses buckets
 ```
 
 ### Set up operating currency
-The envelopes will read the operating currency from the core beancount option.
+The envelopes will read the operating currency from the core beancount option (using the first one if multiple operating currencies are set.
 ```
 option "operating_currency" "EUR"
 ```
-It will default to USD if this option is not set. Only a single currency is supported for the budget. 
+It will default to USD if this option is not set. Only a single currency is supported for a given budget. 
 
+The operating currency of the budget can now also be set as an option.
+...
+2020-01-31 custom "envelope" "currency" "EUR"
+...
+
+### Multiple budgets in multiple currency
+To set multiple budgets in multiple currencies, define the currencies as a list in the extension options.
+...
+2000-01-01 custom "fava-extension" "fava_envelope" "{'currencies':['GBP', 'USD']
+...
+Then each envelope directive has to be postponed by the currency to identify which budget it refers to.
+...
+2020-01-01 custom "envelopeGBP" "budget account" "Assets:Checking"
+2020-01-31 custom "envelopeUSD" "allocate" "Expenses:Food" 100.00
+...
+
+
+For multiple budgets, an account can be set to be treated as an income account, so that operations from this account will be treated as income for envelope budgeting purpose (only).
+...
+2020-01-31 "envelopeGBP" "income account" "Assets:USD:MyBank"
+...
