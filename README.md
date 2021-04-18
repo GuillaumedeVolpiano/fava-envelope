@@ -76,7 +76,7 @@ The operating currency of the budget can now also be set as an option.
 ### Multiple budgets in multiple currency
 To set multiple budgets in multiple currencies, define the currencies as a list in the extension options.
 ```
-2000-01-01 custom "fava-extension" "fava_envelope" "{'currencies':['GBP', 'USD']
+2000-01-01 custom "fava-extension" "fava_envelope" "{'currencies':['GBP', 'USD']}"
 ```
 Then each envelope directive has to be postponed by the currency to identify which budget it refers to.
 ```
