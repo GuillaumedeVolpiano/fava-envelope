@@ -18,7 +18,9 @@ from beancount.core import convert
 from beancount.core import inventory
 from beancount.core import account_types
 from beancount.core import amount
+from beancount.core import prices
 from beancount.query import query
+from beancount.query import numberify
 from beancount.core.data import Custom
 from beancount.parser import options
 
@@ -33,7 +35,6 @@ class BeancountEnvelope:
             self.etype="envelope"+self.currency
         else:
             self.etype="envelope"
-
         self.start_date, self.budget_accounts, self.mappings, self.income_accounts = self._find_envelop_settings()
         #Set the currency if it wasn't set at initialisation or in the options.
         if not self.currency:
@@ -54,7 +55,6 @@ class BeancountEnvelope:
 
         self.price_map = prices.build_price_map(entries)
         self.acctypes = options.get_account_types(options_map)
-
 
     def _find_currency(self, options_map):
         default_currency = 'USD'
@@ -202,7 +202,6 @@ class BeancountEnvelope:
             month = (entry.date.year, entry.date.month)
             # TODO domwe handle no transaction in a month?
             all_months.add(month);
-
             # TODO
             contains_budget_accounts = False
             for posting in entry.postings:
@@ -222,19 +221,14 @@ class BeancountEnvelope:
                         break
 
                 account_type = account_types.get_account_type(account)
-                if posting.units.currency != self.currency:
-                    orig=posting.units.number
-                    #If the posting has a price towards the budget's currency,
-                    #use this to convert to the desired currency.
-                    if posting.price is not None and posting.price.currency==self.currency:
-                        converted=posting.price.number*orig
-                        posting=data.Posting(posting.account,
-                                             amount.Amount(converted,self.currency),
-                                             posting.cost, None, posting.flag,posting.meta)
-                    else:
-                        #TODO: use price databases or options to set the price.
-                        continue
-
+                if posting.price is not None and posting.units.currency != self.currency:
+                    #If the posting has a price, convert it to the budget account's currency.
+                    converted=posting.price.number*posting.units.number
+                    currency=posting.price.currency
+                    posting=data.Posting(posting.account,
+                                         amount.Amount(converted,currency),
+                                         posting.cost, None, posting.flag,posting.meta)
+                    
                 if (account_type == self.acctypes.income
                     or (any(regexp.match(account) for regexp in self.income_accounts))):
                     account = "Income"
@@ -251,6 +245,7 @@ class BeancountEnvelope:
             for month, balance in sorted(months.items()):
                 year, mth = month
                 date = datetime.date(year, mth, 1)
+                #convert balances from non-reference currency accounts.
                 balance = balance.reduce(convert.get_value, self.price_map, date)
                 balance = balance.reduce(
                     convert.convert_position, self.currency, self.price_map, date)
